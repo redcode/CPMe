@@ -11,6 +11,7 @@ static Z80      cpu;
 static zuint8   memory[65536];
 static zboolean quit_program;
 
+
 static zuint8 cpu_read(void *context, zuint16 address)
 	{return memory[address];}
 
@@ -144,7 +145,7 @@ int main(int argc, char **argv)
 	cpu.options      = Z80_MODEL_ZILOG_NMOS;
 
 	z80_power(&cpu, TRUE);
-
+	Z80_PC(cpu) = 0x0100;
 	quit_program = FALSE;
 	do z80_execute(&cpu, Z80_MAXIMUM_CYCLES); while (!quit_program);
 
