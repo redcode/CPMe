@@ -1,11 +1,15 @@
 #include <Z80.h>
 #include <Z/constants/pointer.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-static Z80 cpu;
-static zuint8 memory[65536];
+#define OPCODE_NOP 0x00
+#define OPCODE_RET 0xC9
 
+static Z80      cpu;
+static zuint8   memory[65536];
+static zboolean quit_program;
 
 static zuint8 cpu_read(void *context, zuint16 address)
 	{return memory[address];}
@@ -21,6 +25,61 @@ static zuint8 cpu_in(void *context, zuint16 port)
 
 static void cpu_out(void *context, zuint16 port, zuint8 value)
 	{}
+
+
+static zuint8 cpu_hook(void *context, zuint16 address)
+	{
+	zuint8 character;
+
+	switch (address)
+		{
+		case 0: /* END */
+		cpu.cycles = Z80_MAXIMUM_CYCLES;
+		quit_program = TRUE;
+		return OPCODE_NOP;
+
+		case 5: /* PRINT */
+		Z_UNUSED(context)
+		if (address != 5) return OPCODE_NOP;
+
+		if (Z80_C(cpu) == 2) switch ((character = Z80_E(cpu)))
+			{
+			case 0x0D: break;
+			case 0x0A: character = '\n';
+
+			default:
+			putchar(character);
+			}
+
+		else if (Z80_C(cpu) == 9)
+			{
+			zuint16 i = Z80_DE(cpu);
+			zuint   c = 0;
+
+			while (memory[i] != '$')
+				{
+				if (c++ > 100)
+					{
+					putchar('\n');
+					fputs("FATAL ERROR: String to print is too long!\n", stderr);
+					exit(EXIT_FAILURE);
+					}
+
+				switch ((character = memory[i++]))
+					{
+					case 0x0D: break;
+					case 0x0A: character = '\n';
+
+					default:
+					putchar(character);
+					}
+				}
+			}
+
+		return OPCODE_RET;
+		}
+
+	}
 
 
 static zboolean load_com(char const *file_path)
@@ -43,6 +102,8 @@ static zboolean load_com(char const *file_path)
 	}
 
 
+
+
 int main(int argc, char **argv)
 	{
 	if (argc != 2)
@@ -52,6 +113,9 @@ int main(int argc, char **argv)
 		}
 
 	memset(memory, 0, 65536);
+
+	memory[0] =
+	memory[5] = Z80_HOOK;
 
 	if (!load_com(argv[1]))
 		{
@@ -75,11 +139,14 @@ int main(int argc, char **argv)
 	cpu.ld_r_a       =
 	cpu.reti	 =
 	cpu.retn	 = Z_NULL;
-	cpu.hook	 = Z_NULL;
+	cpu.hook	 = cpu_hook;
 	cpu.illegal      = Z_NULL;
 	cpu.options      = Z80_MODEL_ZILOG_NMOS;
 
 	z80_power(&cpu, TRUE);
+
+	quit_program = FALSE;
+	do z80_execute(&cpu, Z80_MAXIMUM_CYCLES); while (!quit_program);
 
 	return 0;
 	}
