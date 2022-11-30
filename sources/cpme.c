@@ -1,8 +1,10 @@
 #include <Z80.h>
 #include <Z/constants/pointer.h>
 #include <stdio.h>
+#include <string.h>
 
 static Z80 cpu;
+static zuint8 memory[65536];
 
 
 static zuint8 cpu_read(void *context, zuint16 address)
@@ -27,8 +29,42 @@ static void cpu_out(void *context, zuint16 port, zuint8 value)
 	}
 
 
+static zboolean load_com(char const *file_path)
+	{
+	zboolean ok = FALSE;
+	FILE *file = fopen(file_path, "rb");
+
+	if (file != Z_NULL)
+		{
+		long file_size;
+
+		fseek(file, 0, SEEK_END);
+ 		file_size = ftell(file);
+		fseek(file, 0, SEEK_SET);
+		ok = fread(memory + 0x0100, file_size, 1, file) == 1;
+		fclose(file);
+		}
+
+	return ok;
+	}
+
+
 int main(int argc, char **argv)
 	{
+	if (argc != 2)
+		{
+		puts("Usage: cpme <com file>");
+		return -1;
+		}
+
+	memset(memory, 0, 65536);
+
+	if (!load_com(argv[1]))
+		{
+		fprintf(stderr, "Can't load file: '%s'\n", argv[1]);
+		return -1;
+		}
+
 	cpu.context	 = Z_NULL;
 	cpu.fetch_opcode =
 	cpu.fetch	 =
