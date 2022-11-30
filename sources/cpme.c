@@ -8,25 +8,19 @@ static zuint8 memory[65536];
 
 
 static zuint8 cpu_read(void *context, zuint16 address)
-	{
-	return 0;
-	}
+	{return memory[address];}
 
 
 static void cpu_write(void *context, zuint16 address, zuint8 value)
-	{
-	}
+	{memory[address] = value;}
 
 
 static zuint8 cpu_in(void *context, zuint16 port)
-	{
-	return 0;
-	}
+	{return 0;}
 
 
 static void cpu_out(void *context, zuint16 port, zuint8 value)
-	{
-	}
+	{}
 
 
 static zboolean load_com(char const *file_path)
